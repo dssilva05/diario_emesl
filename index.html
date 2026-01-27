@@ -100,15 +100,31 @@
         if(ALUNOS[t]) { s.add(new Option("Selecione o Aluno...", "")); ALUNOS[t].forEach(a => s.add(new Option(a, a))); }
     }
 
+let cargoLogado = ""; // Variável global
+
     async function executarLogin() {
-        const u = document.getElementById('userLogin').value; const s = document.getElementById('passLogin').value;
-        try {
-            const res = await fetch(`${SCRIPT_URL}?acao=login&usuario=${u}&senha=${s}`);
-            const dados = await res.json();
-            if (dados.status === "Autorizado") { document.getElementById('secaoAcesso').classList.add('hidden'); document.getElementById('conteudoDiario').classList.remove('hidden'); document.getElementById('nomeProfLogado').value = dados.nome; }
-            else { alert("Usuário ou senha incorretos."); }
-        } catch (e) { alert("Erro de conexão."); }
-    }
+    const u = document.getElementById('userLogin').value; 
+    const s = document.getElementById('passLogin').value;
+    try {
+        const res = await fetch(`${SCRIPT_URL}?acao=login&usuario=${u}&senha=${s}`);
+        const dados = await res.json();
+        if (dados.status === "Autorizado") {
+            cargoLogado = dados.cargo; // Armazena o cargo (Diretor ou Professor)
+            
+            document.getElementById('secaoAcesso').classList.add('hidden');
+            document.getElementById('conteudoDiario').classList.remove('hidden');
+            
+            const campoProf = document.getElementById('nomeProfLogado');
+            campoProf.value = dados.nome;
+
+            if(cargoLogado === "Diretor") {
+                campoProf.readOnly = false;
+                campoProf.style.background = "#fff";
+                campoProf.placeholder = "Digite o nome do responsável";
+            }
+        } else { alert("Usuário ou senha incorretos."); }
+    } catch (e) { alert("Erro de conexão."); }
+}
 
     async function executarCadastro() {
         let cpf = document.getElementById('cadCpf').value.replace(/\D/g, '');
@@ -133,13 +149,35 @@
     }
 
     async function gravarOcorrencia() {
-        const p = new URLSearchParams();
-        p.append('acao', 'salvarOcorrencia'); p.append('professor', document.getElementById('nomeProfLogado').value);
-        p.append('turma', document.getElementById('selTurma').value); p.append('aluno', document.getElementById('selAluno').value);
-        p.append('texto', document.getElementById('relatoTexto').value);
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: p });
-        alert("✅ Gravado!"); document.getElementById('relatoTexto').value = "";
+    const nomeResponsavel = document.getElementById('nomeProfLogado').value;
+    const relato = document.getElementById('relatoTexto').value;
+    
+    if(!relato || !nomeResponsavel) return alert("Preencha o nome e o relato!");
+
+    // Se quem está logado é Diretor, adiciona o prefixo no nome antes de enviar
+    let nomeFinal = nomeResponsavel;
+    if (cargoLogado === "Diretor") {
+        // Verifica se já não começa com Diretor para não duplicar
+        if (!nomeFinal.startsWith("Diretor(a):")) {
+            nomeFinal = "Diretor(a): " + nomeResponsavel;
+        }
+    } else {
+        if (!nomeFinal.startsWith("Prof(a):")) {
+            nomeFinal = "Prof(a): " + nomeResponsavel;
+        }
     }
+
+    const p = new URLSearchParams();
+    p.append('acao', 'salvarOcorrencia');
+    p.append('professor', nomeFinal);
+    p.append('turma', document.getElementById('selTurma').value);
+    p.append('aluno', document.getElementById('selAluno').value);
+    p.append('texto', relato);
+
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: p });
+    alert("✅ Registro salvo como " + (cargoLogado === "Diretor" ? "Direção" : "Professor") + "!");
+    document.getElementById('relatoTexto').value = "";
+}
 
     async function consultarHistorico() {
         const al = document.getElementById('selAlunoCons').value;
@@ -152,11 +190,11 @@
             const filtrados = data.filter(r => r[4] === al);
             if(filtrados.length === 0) { resDiv.innerHTML = "Nada encontrado."; document.getElementById('btnImp').style.display = "none"; }
             else {
-                let html = `<h2>Histórico: ${al}</h2>`;
+                let html = `<h2>Ocorrências: ${al}</h2>`;
                 html += filtrados.map(r => {
                     const id = String(r[0]);
-                    const podeApagar = (r[2] === profLogado);
-                    return `<div class="item-ocorrencia" id="card-${id}">${podeApagar ? `<button onclick="apagarRegistro('${id}')" style="float:right; background:red; color:white; border:none; padding:5px; border-radius:5px; cursor:pointer;">Apagar</button>` : ''}<strong>Data:</strong> ${r[1]} | <strong>Prof:</strong> ${r[2]}<br><br>${r[5]}</div>`;
+                    const podeApagar = (r[2].includes(profLogado) || cargoLogado === "Diretor");
+                    return `<div class="item-ocorrencia" id="card-${id}">${podeApagar ? `<button onclick="apagarRegistro('${id}')" style="float:right; background:red; color:white; border:none; padding:5px; border-radius:5px; cursor:pointer;">Apagar</button>` : ''}<strong>Data:</strong> ${r[1]} | ${r[2]}<br><br>${r[5]}</div>`;
                 }).join('');
                 resDiv.innerHTML = html; document.getElementById('btnImp').style.display = "block";
             }
