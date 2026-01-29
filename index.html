@@ -169,13 +169,13 @@
 }
 
 function enviarWhatsApp() {
-    const telefone = "5531975580836"; // LEMBRE-SE DE COLOCAR SEU NÚMERO AQUI (DDI + DDD + NÚMERO)
+    const telefone = "5531975580836"; 
     
+    const escola = document.getElementById('escolaDuvida').value; // Pega o nome da escola
     let nomeInformado = document.getElementById('nomeDuvida').value;
     const duvida = document.getElementById('textoDuvida').value;
     const nomeLogado = document.getElementById('nomeProfLogado').value;
 
-    // Se ele não digitou o nome na caixa de ajuda, mas está logado, usa o nome do login
     if (!nomeInformado && nomeLogado) {
         nomeInformado = nomeLogado;
     }
@@ -183,16 +183,19 @@ function enviarWhatsApp() {
     if (!nomeInformado) return alert("Por favor, informe seu nome.");
     if (!duvida) return alert("Por favor, descreva sua dúvida.");
 
-    const mensagem = `*Suporte Diário de Bordo*\n\n*De:* ${nomeInformado}\n*Dúvida:* ${duvida}`;
+    // Mensagem formatada com a Escola inclusa
+    const mensagem = `*Suporte Diário de Bordo*\n\n*Escola:* ${escola}\n*De:* ${nomeInformado}\n*Dúvida:* ${duvida}`;
+    
     const url = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(mensagem)}`;
 
     window.open(url, '_blank');
     
-    // Limpa os campos e fecha a caixinha
     document.getElementById('nomeDuvida').value = "";
     document.getElementById('textoDuvida').value = "";
     toggleAjuda();
 }
+
+
     function irPara(id) { document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('telaCadastro').classList.add('hidden'); document.getElementById(id).classList.remove('hidden'); }
     function tab(n) { document.getElementById('aba1').classList.toggle('hidden', n !== 1); document.getElementById('aba2').classList.toggle('hidden', n !== 2); document.getElementById('t1').classList.toggle('active', n === 1); document.getElementById('t2').classList.toggle('active', n === 2); if(n===2) cancelarEdicao(); }
     
@@ -366,9 +369,13 @@ function enviarWhatsApp() {
 
 <div id="caixaAjuda" class="modal-ajuda hidden">
     <h3>Suporte Técnico</h3>
-    <p style="font-size: 13px; color: #666;">Identifique-se e descreva sua dúvida:</p>
+    
+    <input type="text" id="escolaDuvida" value="E. M. Etelvino Souza Lima" readonly style="background:#f0f0f0; margin-bottom: 10px; font-weight:bold;">
+    
     <input type="text" id="nomeDuvida" placeholder="Seu nome completo" style="margin-bottom: 10px; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px;">
+    
     <textarea id="textoDuvida" rows="4" placeholder="Descreva o problema aqui..." style="width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 8px;"></textarea>
+    
     <button class="btn-main" style="background:#25d366; margin-top:10px;" onclick="enviarWhatsApp()">
         Enviar via WhatsApp
     </button>
