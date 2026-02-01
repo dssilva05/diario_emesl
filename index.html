@@ -28,17 +28,14 @@
         .titulo-trimestre { background: var(--gold); color: #000; padding: 8px 15px; margin-top: 25px; border-radius: 6px; font-weight: bold; border-left: 10px solid var(--blue); }
         .item-ocorrencia { background: white; padding: 15px; border-left: 5px solid var(--blue); margin-top: 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
         
-        /* Estilos Checkbox Corrigidos */
         .filtro-box { margin-top: 15px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ccc; display: flex; flex-direction: column; gap: 12px; }
         .filtro-item { display: flex; align-items: center; cursor: pointer; font-size: 14px; color: #444; }
         .filtro-item input { width: 18px; height: 18px; margin: 0 12px 0 0; cursor: pointer; }
 
-        /* Suporte e Ajuda */
         .btn-ajuda-fixo { position: fixed; bottom: 20px; right: 20px; background: #25d366; color: white; padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 10px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 9999; border: none; }
         .modal-ajuda { position: fixed; bottom: 90px; right: 20px; width: 280px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; text-align: left; }
         .modal-ajuda h3 { margin: 0 0 10px; color: var(--blue); font-size: 18px; }
-        .modal-ajuda input { margin-bottom: 10px; font-size: 14px; }
-        
+
         @media print { body { background: white !important; } header { display: flex !important; border-bottom: 2px solid #000 !important; color: black !important; } .tabs, .btn-main, label, select, .box-auth, button, .btn-link, .btn-ajuda-fixo, .modal-ajuda, .filtro-box { display: none !important; } .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; } .card { box-shadow: none !important; background: white !important; } .titulo-trimestre { border: 1px solid #000 !important; background: #eee !important; margin-top: 20px !important; } }
     </style>
 </head>
@@ -88,6 +85,12 @@
             <select id="selTurma" onchange="atualizarAlunos('selTurma', 'selAluno')"><option value="">Carregando...</option></select>
             <label>Aluno:</label>
             <select id="selAluno"><option value="">Selecione a turma...</option></select>
+            
+            <label style="display: flex; align-items: center; cursor: pointer; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 15px;">
+                <input type="checkbox" id="chkAdvertencia" style="width: auto; margin: 0 10px 0 0;"> 
+                <span style="color: #856404; font-size: 14px;">Foi enviada Advertência por Escrito?</span>
+            </label>
+
             <label>Relato:</label>
             <textarea id="relatoTexto" rows="5"></textarea>
             <button class="btn-main" id="btnGravar" onclick="gravarOcorrencia()">Gravar no Diário</button>
@@ -129,7 +132,7 @@
     <h3>Suporte Técnico</h3>
     <input type="text" id="escolaDuvida" value="E. M. Etelvino Souza Lima" readonly style="background:#f0f0f0;">
     <input type="text" id="nomeDuvida" placeholder="Seu nome completo">
-    <textarea id="textoDuvida" id="textoDuvida" rows="4" placeholder="Descreva sua dúvida..."></textarea>
+    <textarea id="textoDuvida" rows="4" placeholder="Descreva sua dúvida..."></textarea>
     <button class="btn-main" style="background:#25d366; margin-top: 10px;" onclick="enviarWhatsApp()">Enviar via WhatsApp</button>
 </div>
 
@@ -139,7 +142,7 @@
     let cargoLogado = "", profNomeLogado = "", disciplinaLogada = "", idEditando = null;
 
     window.onload = function() {
-        const salvo = localStorage.getItem('diarioAcesso');
+        const salvo = localStorage.getItem('diarioAcesso'); // Chave da Etelvino
         if (salvo) aplicarLogin(JSON.parse(salvo));
         carregarDadosIniciais();
     };
@@ -161,10 +164,7 @@
         const t = document.getElementById(idT).value;
         const s = document.getElementById(idA);
         s.innerHTML = '<option value="">Selecione o Aluno...</option>';
-        if(ALUNOS[t]) {
-            // A lista vem pronta da planilha (incluindo "Turma Toda" se houver)
-            ALUNOS[t].forEach(al => s.add(new Option(al, al)));
-        }
+        if(ALUNOS[t]) { ALUNOS[t].forEach(al => s.add(new Option(al, al))); }
     }
 
     function alternarCheckboxes(quem) {
@@ -186,136 +186,93 @@
     }
 
     function aplicarLogin(d) {
-    profNomeLogado = d.nome;
-    disciplinaLogada = d.disciplina;
-    
-    // Lista de cargos que têm permissão total de edição
-    const cargosGestores = [
-        "diretor", "diretora", 
-        "vice-diretor", "vice-diretora", 
-        "coordenador", "coordenadora", 
-        "supervisor", "supervisora"
-    ];
-
-    // Verifica se o que está escrito no Cargo (Coluna F) ou Disciplina (Coluna G) 
-    // coincide com algum cargo da lista acima
-    const eGestor = cargosGestores.some(cargo => 
-        d.cargo.toLowerCase().includes(cargo) || 
-        d.disciplina.toLowerCase().includes(cargo)
-    );
-
-    cargoLogado = eGestor ? "Diretor" : "Professor";
-
-    document.getElementById('secaoAcesso').classList.add('hidden');
-    document.getElementById('conteudoDiario').classList.remove('hidden');
-    document.getElementById('nomeProfLogado').value = profNomeLogado;
-
-    if(cargoLogado === "Diretor") { 
-        document.getElementById('nomeProfLogado').readOnly = false; 
-        document.getElementById('nomeProfLogado').style.background = "#fff"; 
+        profNomeLogado = d.nome;
+        disciplinaLogada = d.disciplina;
+        const cargosGestores = ["diretor", "diretora", "vice-diretor", "vice-diretora", "coordenador", "coordenadora", "supervisor", "supervisora"];
+        const eGestor = cargosGestores.some(c => d.cargo.toLowerCase().includes(c) || d.disciplina.toLowerCase().includes(c));
+        cargoLogado = eGestor ? "Diretor" : "Professor";
+        document.getElementById('secaoAcesso').classList.add('hidden');
+        document.getElementById('conteudoDiario').classList.remove('hidden');
+        document.getElementById('nomeProfLogado').value = profNomeLogado;
+        if(cargoLogado === "Diretor") { document.getElementById('nomeProfLogado').readOnly = false; document.getElementById('nomeProfLogado').style.background = "#fff"; }
+        definirDataHoje();
     }
-    definirDataHoje();
-}
 
     async function gravarOcorrencia() {
-    const dVal = document.getElementById('dataOcorrenciaManual').value;
-    if(!dVal) return alert("Selecione a data!");
-    
-    const [ano, mes, dia] = dVal.split("-");
-    const dFormat = `${dia}/${mes}/${ano}`;
-    const nomeInput = document.getElementById('nomeProfLogado').value;
-    const primNome = nomeInput.split(" ")[0];
+        const dVal = document.getElementById('dataOcorrenciaManual').value;
+        if(!dVal) return alert("Selecione a data!");
+        const [ano, mes, dia] = dVal.split("-");
+        const dFormat = `${dia}/${mes}/${ano}`;
+        const nomeFinal = `Prof(a): ${profNomeLogado.split(" ")[0]} (${disciplinaLogada})`;
 
-    // Formatação especial para a Diretoria
-    let nomeFinal;
-    if (cargoLogado === "Diretor") {
-        // Usa o que estiver na disciplina (ex: Diretora) entre parênteses
-        nomeFinal = `Prof(a): ${primNome} (${disciplinaLogada})`;
-    } else {
-        nomeFinal = `Prof(a): ${primNome} (${disciplinaLogada})`;
+        const p = new URLSearchParams();
+        p.append('acao', idEditando ? 'editarOcorrencia' : 'salvarOcorrencia');
+        if(idEditando) p.append('id', idEditando);
+        p.append('professor', nomeFinal); p.append('dataManual', dFormat);
+        p.append('turma', document.getElementById('selTurma').value);
+        p.append('aluno', document.getElementById('selAluno').value);
+        p.append('texto', document.getElementById('relatoTexto').value);
+        p.append('advertencia', document.getElementById('chkAdvertencia').checked ? "SIM" : "NÃO");
+
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: p });
+        alert("Sucesso!");
+        document.getElementById('chkAdvertencia').checked = false;
+        cancelarEdicao(); document.getElementById('relatoTexto').value = ""; definirDataHoje();
     }
-
-    const p = new URLSearchParams();
-    p.append('acao', idEditando ? 'editarOcorrencia' : 'salvarOcorrencia');
-    if(idEditando) p.append('id', idEditando);
-    p.append('professor', nomeFinal);
-    p.append('dataManual', dFormat);
-    p.append('turma', document.getElementById('selTurma').value);
-    p.append('aluno', document.getElementById('selAluno').value);
-    p.append('texto', document.getElementById('relatoTexto').value);
-
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: p });
-    alert("Sucesso!");
-    cancelarEdicao();
-    document.getElementById('relatoTexto').value = "";
-    definirDataHoje();
-}
 
     async function consultarHistorico() {
-    const t = document.getElementById('selTurmaCons').value, a = document.getElementById('selAlunoCons').value;
-    const p = document.getElementById('selPeriodoCons').value, vT = document.getElementById('chkTodosRegistros').checked;
-    const rDiv = document.getElementById('resConsulta');
-    
-    if (!t || !a) return alert("Selecione Turma e Aluno.");
-    rDiv.innerHTML = "Buscando...";
-    
-    try {
-        const res = await fetch(`${SCRIPT_URL}?acao=getDados`);
-        const data = await res.json();
+        const t = document.getElementById('selTurmaCons').value, a = document.getElementById('selAlunoCons').value;
+        const p = document.getElementById('selPeriodoCons').value, vT = document.getElementById('chkTodosRegistros').checked;
+        const rDiv = document.getElementById('resConsulta');
         
-        // 1. Filtro inicial por Turma e Aluno
-        let filtrados = data.filter(r => r[3] && r[4] && String(r[3]).trim() === t && String(r[4]).trim() === a);
+        if (!t || !a) return alert("Selecione Turma e Aluno.");
+        rDiv.innerHTML = "Buscando...";
         
-        // 2. ORDENAÇÃO POR DATA (Da menor para a maior)
-        filtrados.sort((a, b) => {
-            const converterData = (txt) => {
-                const partes = txt.split('/');
-                // Retorna um objeto de data YYYY-MM-DD para comparação correta
-                return new Date(partes[2], partes[1] - 1, partes[0]);
-            };
-            return converterData(a[1]) - converterData(b[1]);
-        });
+        try {
+            const res = await fetch(`${SCRIPT_URL}?acao=getDados`);
+            const data = await res.json();
+            
+            let filtrados = data.filter(r => String(r[3]).trim() === t && String(r[4]).trim() === a);
+            
+            // ORDENAÇÃO POR DATA
+            filtrados.sort((a, b) => {
+                const conv = (txt) => { const pt = txt.split('/'); return new Date(pt[2], pt[1]-1, pt[0]); };
+                return conv(a[1]) - conv(b[1]);
+            });
 
-        // 3. Filtro por Período (Trimestre)
-        if (p !== "Ano Todo") filtrados = filtrados.filter(r => identificarTrimestre(r[1]) === p);
-        
-        // 4. Filtro por Professor (Apenas meus ou todos)
-        if (!vT) {
-            const meu = profNomeLogado.split(" ")[0];
-            filtrados = filtrados.filter(r => String(r[2]).includes(meu));
-        }
-
-        if (filtrados.length === 0) { rDiv.innerHTML = "Nada encontrado."; return; }
-
-        // Organização Visual por Trimestre
-        let grupos = { "1º Trimestre": [], "2º Trimestre": [], "3º Trimestre": [], "Fora de Período": [] };
-        filtrados.forEach(r => {
-            const tri = identificarTrimestre(r[1]);
-            if(grupos[tri]) grupos[tri].push(r);
-            else grupos["Fora de Período"].push(r);
-        });
-
-        let html = `<h2>Histórico: ${a}</h2>`;
-        for (let tri in grupos) {
-            if (grupos[tri].length > 0) {
-                html += `<div class="titulo-trimestre">${tri}</div>`;
-                grupos[tri].forEach(r => {
-                    const pode = (String(r[2]).includes(profNomeLogado.split(" ")[0]) || cargoLogado === "Diretor");
-                    html += `<div class="item-ocorrencia" id="card-${r[0]}">
-                        ${pode ? `<button onclick="apagarRegistro('${r[0]}')" style="float:right; background:red; color:white; border:none; padding:5px; border-radius:5px; margin-left:5px">Apagar</button>
-                        <button onclick="carregarParaEdicao('${r[0]}','${r[1]}','${r[3]}','${r[4]}','${r[5]}')" style="float:right; background:orange; border:none; padding:5px; border-radius:5px">Editar</button>` : ''}
-                        <strong>Data:</strong> ${r[1]} | <strong>${r[2]}</strong><br><br>${r[5]}
-                    </div>`;
-                });
+            if (p !== "Ano Todo") filtrados = filtrados.filter(r => identificarTrimestre(r[1]) === p);
+            if (!vT) {
+                const meu = profNomeLogado.split(" ")[0];
+                filtrados = filtrados.filter(r => String(r[2]).includes(meu));
             }
-        }
-        rDiv.innerHTML = html; 
-        document.getElementById('btnImp').style.display = "block";
-    } catch (e) { 
-        console.error(e);
-        rDiv.innerHTML = "Erro técnico ao carregar os dados."; 
+            if (filtrados.length === 0) { rDiv.innerHTML = "Nada encontrado."; return; }
+            
+            let grupos = { "1º Trimestre": [], "2º Trimestre": [], "3º Trimestre": [], "Fora de Período": [] };
+            filtrados.forEach(r => {
+                const tri = identificarTrimestre(r[1]);
+                if(grupos[tri]) grupos[tri].push(r); else grupos["Fora de Período"].push(r);
+            });
+            
+            let html = `<h2>Histórico: ${a}</h2>`;
+            for (let tri in grupos) {
+                if (grupos[tri].length > 0) {
+                    html += `<div class="titulo-trimestre">${tri}</div>`;
+                    grupos[tri].forEach(r => {
+                        const pode = (String(r[2]).includes(profNomeLogado.split(" ")[0]) || cargoLogado === "Diretor");
+                        const temAdverte = r[6] === "SIM" ? `<div style="margin-top:8px; color:#d32f2f; font-weight:bold; font-size:12px;">⚠️ ADVERTÊNCIA POR ESCRITO ENVIADA</div>` : "";
+                        
+                        html += `<div class="item-ocorrencia" id="card-${r[0]}">
+                            ${pode ? `<button onclick="apagarRegistro('${r[0]}')" style="float:right; background:red; color:white; border:none; padding:5px; border-radius:5px; margin-left:5px">Apagar</button>
+                            <button onclick="carregarParaEdicao('${r[0]}','${r[1]}','${r[3]}','${r[4]}','${r[5]}')" style="float:right; background:orange; border:none; padding:5px; border-radius:5px">Editar</button>` : ''}
+                            <strong>Data:</strong> ${r[1]} | <strong>${r[2]}</strong><br><br>${r[5]}
+                            ${temAdverte}
+                        </div>`;
+                    });
+                }
+            }
+            rDiv.innerHTML = html; document.getElementById('btnImp').style.display = "block";
+        } catch (e) { rDiv.innerHTML = "Erro técnico."; }
     }
-}
 
     function identificarTrimestre(ds) {
         const p = ds.split('/'); const d = new Date(p[2], p[1]-1, p[0]);
