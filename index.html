@@ -404,10 +404,13 @@
     let cargoLogado = "", profNomeLogado = "", disciplinaLogada = "", idEditando = null;
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW OK'), err => console.log('Erro SW'));
-        });
-    }
+    window.addEventListener('load', () => {
+        // Use o caminho relativo './sw.js' para garantir que ele encontre o arquivo na pasta correta
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker registrado!', reg))
+            .catch(err => console.log('Erro no registro do SW:', err));
+    });
+}
 
     window.onload = function() {
     window.NOME_ESCOLA = "E. M. Etelvino Souza Lima"; // [cite: 2]
@@ -1422,6 +1425,7 @@ async function gravarOcorrencia() {
 
 </body>
 </html>
+
 
 
 
