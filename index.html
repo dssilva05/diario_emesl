@@ -239,7 +239,7 @@
         <button id="t1" class="tab-btn active" onclick="tab(1)">📝 INCLUIR</button>
         <button id="t2" class="tab-btn" onclick="tab(2)">🔍 CONSULTAR</button>
         <button id="t3" class="tab-btn" onclick="tab(3)">📊 ALERTAS</button>
-        <button id="t4" class="tab-btn hidden" onclick="tab(4)">👥 CADASTRO</button>                                                          
+        <button id="t4" class="tab-btn" onclick="tab(4)">👥 CADASTRO</button>                                                          
         <button onclick="logout()" style="background:none; color:white; flex:0.3; cursor:pointer">Sair</button>
     </div>
     <div class="card">
@@ -597,6 +597,9 @@
 
     // Aparecer o botão de cadastro (Aba 4) apenas para Gestão
     const btnAlunos = document.getElementById('t4');
+        if (btnAlunos) {
+    btnAlunos.classList.remove('hidden'); // Isso garante que ele SEMPRE apareça para todos
+}
     
 
     // 6. Inicialização de Dados
@@ -859,51 +862,47 @@ async function gravarOcorrencia() {
 }
 
     function exibirDados(data, t, a, p) {
-    window.ultimoResultadoConsulta = data; // Salva para permitir edição de textos longos
+    window.ultimoResultadoConsulta = data; // Salva para permitir edição
     const rDiv = document.getElementById('resConsulta');
     const verTodos = document.getElementById('chkTodosRegistros').checked;
-
-        
     
-    // 1. Filtragem Inicial
+    // 1. Filtragem Inicial por Turma e Aluno
     let filtrados = data.filter(r => {
         const turmaBate = r[3] && String(r[3]).trim() === t;
         const alunoBate = a ? (String(r[4]).trim() === a) : true;
         return turmaBate && alunoBate;
     });
 
-    // 2. Filtros de Trimestre e Dono
+    // 2. Filtro de Trimestre
     if (p !== "Todos os Trimestres") {
         filtrados = filtrados.filter(r => identificarTrimestre(r[1]) === p);
     }
     
+    // 3. Filtro de "Apenas meus registros" (se o checkbox estiver marcado)
     if (!verTodos) {
-        const meuNome = profNomeLogado.split(" ")[0].toUpperCase();
-        filtrados = filtrados.filter(r => String(r[2]).toUpperCase().includes(meuNome));
+        const meuNomeFiltro = profNomeLogado.split(" ")[0].toUpperCase();
+        filtrados = filtrados.filter(r => String(r[2]).toUpperCase().includes(meuNomeFiltro));
     }
 
     if (filtrados.length === 0) { 
-        rDiv.innerHTML = "<p style='text-align:center; padding:20px;'>Nada encontrado.</p>"; 
+        rDiv.innerHTML = "<p style='text-align:center; padding:20px;'>Nenhuma ocorrência encontrada para os filtros selecionados.</p>"; 
         return; 
     }
 
-    // --- AGRUPAMENTO E CONTAGEM ---
+    // --- AGRUPAMENTO POR ALUNO PARA ORGANIZAR A LISTA ---
     const agrupadoPorAluno = {};
     filtrados.forEach(r => {
         const nomeAluno = String(r[4]).toUpperCase();
-        if (!agrupadoPorAluno[nomeAluno]) {
-            agrupadoPorAluno[nomeAluno] = [];
-        }
+        if (!agrupadoPorAluno[nomeAluno]) agrupadoPorAluno[nomeAluno] = [];
         agrupadoPorAluno[nomeAluno].push(r);
     });
 
-    // --- ORDENAÇÃO POR QUANTIDADE (DECRESCENTE) ---
+    // Ordenação: Alunos com mais ocorrências aparecem primeiro
     const nomesOrdenados = Object.keys(agrupadoPorAluno).sort((a, b) => {
         return agrupadoPorAluno[b].length - agrupadoPorAluno[a].length;
     });
 
-    let html = `<h3 style="text-align:center; color:var(--blue);">Relatório de Ocorrências - Turma ${t}</h3>
-                <p style="text-align:center; font-size:12px;">(Ordenado por maior número de registros)</p>`;
+    let html = `<h3 style="text-align:center; color:var(--blue);">Relatório de Ocorrências - Turma ${t}</h3>`;
 
     nomesOrdenados.forEach(nome => {
         const qtd = agrupadoPorAluno[nome].length;
@@ -916,19 +915,21 @@ async function gravarOcorrencia() {
         <div style="background: rgba(255,255,255,0.5); padding: 10px; border: 1px solid #ccc; border-top: none; border-radius: 0 0 8px 8px; margin-bottom: 10px;">
         `;
 
+        // Ordenar as ocorrências do aluno por data (mais recente por último)
         const ocorrenciasAluno = agrupadoPorAluno[nome].sort((m, n) => {
             const converter = (s) => {
-                const p = s.split('/');
-                return new Date(p[2], p[1] - 1, p[0]).getTime();
+                const parts = s.split('/');
+                return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
             };
             return converter(m[1]) - converter(n[1]);
         });
 
         ocorrenciasAluno.forEach(r => {
-            const souDono = String(r[2]).toUpperCase().includes(profNomeLogado.split(" ")[0].toUpperCase());
-            const souGestor = (cargoLogado === "Diretor");
-            const tri = identificarTrimestre(r[1]);
+            // --- REGRA DE OURO: VERIFICAÇÃO DE PROPRIEDADE ---
+            const meuNomeLogado = profNomeLogado.split(" ")[0].toUpperCase();
+            const souDono = String(r[2]).toUpperCase().includes(meuNomeLogado);
 
+            const tri = identificarTrimestre(r[1]);
             let textoTratativaBruto = r[7] || "";
             let textoExibicao = textoTratativaBruto;
             let avisoDataReuniao = "";
@@ -941,27 +942,24 @@ async function gravarOcorrencia() {
                 }
             }
 
-            const relatoPrivadoHTML = (souGestor && r[8]) ? 
-                `<div style="background:#fff3e0; padding:10px; border:1px dashed #ff9800; margin-top:8px; font-size:12px; color:#e65100;">
-                    <strong>🔒 Relato:</strong> ${r[8]}
-                </div>` : "";
-
-            // RESTAURANDO OS BOTÕES DE CONTROLE AQUI
-            html += `
-            <div class="item-ocorrencia" style="margin-top: 10px; border-left: 5px solid var(--gold); position: relative;">
-                // Substitua o bloco dos botões por este:
+            // Só monta os botões se o professor logado for quem criou o registro
+            let botoesControle = "";
+            if (souDono) {
+                botoesControle = `
                 <div style="float:right; display:flex; gap:5px;">
-                    ${(souDono || souGestor) ? `<button onclick="prepararEdicao('${r[0]}', false)" style="background:orange; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer; font-size:10px;">Editar</button>` : ''}
-                    ${souGestor ? `
-                        <button onclick="prepararEdicao('${r[0]}', true)" style="background:#1976d2; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer; font-size:10px;">Tratar</button>
-                        <button onclick="apagarRegistro('${r[0]}')" style="background:red; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:bold;">X</button>
-                    ` : ''}
-                </div>
+                    <button onclick="prepararEdicao('${r[0]}', false)" style="background:orange; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer; font-size:10px;">Editar</button>
+                    <button onclick="prepararEdicao('${r[0]}', true)" style="background:#1976d2; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer; font-size:10px;">Tratar</button>
+                    <button onclick="apagarRegistro('${r[0]}')" style="background:red; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:bold;">X</button>
+                </div>`;
+            }
+
+            html += `
+            <div class="item-ocorrencia" style="margin-top: 10px; border-left: 5px solid var(--gold); position: relative; background: white;">
+                ${botoesControle}
                 <small><strong>${tri}</strong> | 📅 ${r[1]} | ✍️ ${r[2]}</small>
-                <p style="margin:8px 0; font-size:14px;">${r[5]}</p>
-                ${r[6] === "SIM" ? '<p style="color:red; font-weight:bold; font-size:11px;">⚠️ Advertência Enviada</p>' : ''}
-                ${textoTratativaBruto ? `<div style="background:#e8f5e9; padding:8px; border-left:3px solid #4caf50; font-size:12px; margin-top:5px;"><strong>Ação Gestão:</strong> ${textoExibicao} ${avisoDataReuniao}</div>` : ''}
-                ${relatoPrivadoHTML}
+                <p style="margin:8px 0; font-size:14px; color: #333;">${r[5]}</p>
+                ${r[6] === "SIM" ? '<p style="color:red; font-weight:bold; font-size:11px; margin: 5px 0;">⚠️ Advertência Enviada</p>' : ''}
+                ${textoTratativaBruto ? `<div style="background:#e8f5e9; padding:8px; border-left:3px solid #4caf50; font-size:12px; margin-top:5px;"><strong>Tratativa:</strong> ${textoExibicao} ${avisoDataReuniao}</div>` : ''}
             </div>`;
         });
 
@@ -1424,5 +1422,6 @@ async function gravarOcorrencia() {
 
 </body>
 </html>
+
 
 
