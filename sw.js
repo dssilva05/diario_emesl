@@ -1,4 +1,4 @@
-const CACHE_NAME = 'etelvino-v1'; // Incremente sempre que mudar o código
+const CACHE_NAME = 'etelvino-v2'; // Incremente sempre que mudar o código
 const ASSETS = [
   './',
   'index.html',
