@@ -515,19 +515,33 @@
     window.addEventListener('offline', atualizarStatusRede);
 
     async function executarLogin() {
-        const u = document.getElementById('userLogin').value, s = document.getElementById('passLogin').value;
-        const btn = document.getElementById('btnEntrar');
-        btn.innerText = "⏳...";
-        try {
-            const res = await fetch(`${SCRIPT_URL}?acao=login&usuario=${u}&senha=${s}`);
-            const d = await res.json();
-            if(d.status === "Autorizado") {
-                localStorage.setItem('diarioAcessoSobral', JSON.stringify(d)); 
-                aplicarLogin(d);
-            } else alert("Negado.");
-        } catch (e) { alert("Erro de conexão."); }
-        btn.innerText = "Entrar";
+    const u = document.getElementById('userLogin').value;
+    const s = document.getElementById('passLogin').value;
+    const btn = document.querySelector("#telaLogin .btn-main"); // Pega o botão pela classe dentro da div
+    
+    if (!u || !s) return alert("Preencha usuário e senha!");
+    
+    const textoOriginal = btn.innerText;
+    btn.innerText = "⏳...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${SCRIPT_URL}?acao=login&usuario=${encodeURIComponent(u)}&senha=${encodeURIComponent(s)}`);
+        const d = await res.json();
+        
+        if(d.status === "Autorizado") {
+            localStorage.setItem('diarioAcessoSobral', JSON.stringify(d)); 
+            aplicarLogin(d);
+        } else {
+            alert("Usuário ou senha incorretos.");
+        }
+    } catch (e) { 
+        alert("Erro de conexão com o servidor."); 
+    } finally {
+        btn.innerText = textoOriginal;
+        btn.disabled = false;
     }
+}
 
     async function aplicarLogin(d) {
     // 1. Definição de variáveis globais baseadas no retorno do servidor
@@ -1410,4 +1424,5 @@ async function gravarOcorrencia() {
 
 </body>
 </html>
+
 
